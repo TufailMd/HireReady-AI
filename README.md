@@ -6,6 +6,12 @@ HireReady AI is a web application that helps job seekers prepare for interviews 
 
 Users can revisit saved interview reports and generate a tailored resume PDF based on a report.
 
+## 🌐 Live Demo
+
+👉https://hireready-ai-1-ouci.onrender.com
+
+---
+
 ## ✨ Features
 
 - **User Authentication** — Register, log in, and access protected application pages.
