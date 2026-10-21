@@ -2,9 +2,9 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router'
 import "../auth.form.scss"
 import { useAuth } from '../hooks/useAuth'
+import Loading from '../components/Loading'
 
 const Login = () => {
-
     const { loading, handleLogin } = useAuth()
     const navigate = useNavigate()
 
@@ -13,12 +13,13 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+
         await handleLogin({ email, password })
         navigate('/')
     }
 
     if (loading) {
-        return (<main><h1>Loading.......</h1></main>)
+        return <Loading message="Logging in..." />
     }
 
 

@@ -4,14 +4,23 @@ import { login, register, logout, getMe } from "../services/auth.api";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used within AuthContext.Provider");
+  }
+
   const { user, setUser, loading, setLoading } = context;
 
   const handleLogin = async ({ email, password }) => {
     setLoading(true);
+
     try {
       const data = await login({ email, password });
       setUser(data.user);
+      return true;
     } catch (err) {
+      console.error("Login failed:", err);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -19,10 +28,14 @@ export const useAuth = () => {
 
   const handleRegister = async ({ username, email, password }) => {
     setLoading(true);
+
     try {
       const data = await register({ username, email, password });
       setUser(data.user);
+      return true;
     } catch (err) {
+      console.error("Registration failed:", err);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -30,28 +43,54 @@ export const useAuth = () => {
 
   const handleLogout = async () => {
     setLoading(true);
+
     try {
-      const data = await logout();
+      await logout();
       setUser(null);
+      return true;
     } catch (err) {
+      console.error("Logout failed:", err);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    let active = true;
+
     const getAndSetUser = async () => {
       try {
         const data = await getMe();
-        setUser(data.user);
+
+        if (active) {
+          setUser(data.user);
+        }
       } catch (err) {
+        if (active) {
+          setUser(null);
+        }
+
+        console.error("Failed to fetch current user:", err);
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
     getAndSetUser();
-  }, []);
 
-  return { user, loading, handleRegister, handleLogin, handleLogout };
+    return () => {
+      active = false;
+    };
+  }, [setUser, setLoading]);
+
+  return {
+    user,
+    loading,
+    handleRegister,
+    handleLogin,
+    handleLogout,
+  };
 };

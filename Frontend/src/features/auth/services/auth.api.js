@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: "https://hireready-ai-ehuu.onrender.com",
   withCredentials: true,
 });
 
@@ -37,7 +37,9 @@ export async function logout() {
     const response = await api.get("/api/auth/logout");
 
     return response.data;
-  } catch (err) {}
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 export async function getMe() {
