@@ -4,11 +4,17 @@ const interviewController = require("../controllers/interview.controller");
 const upload = require("../middlewares/file.middleware");
 
 const interviewRouter = express.Router();
+const trackFailureStage = (stage) => (req, res, next) => {
+  req.failureStage = stage;
+  next();
+};
 
 interviewRouter.post(
   "/",
   authMiddleware.authUser,
+  trackFailureStage("resume_upload"),
   upload.single("resume"),
+  trackFailureStage("request_validation"),
   interviewController.generateInterViewReportController,
 );
 interviewRouter.get(

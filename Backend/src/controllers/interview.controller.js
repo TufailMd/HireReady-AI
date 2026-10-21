@@ -4,8 +4,10 @@ const {
   generateResumePdf,
 } = require("../services/ai.service");
 const interviewReportModel = require("../models/interviewReport.model");
+const { logRequestFailure } = require("../utils/requestDiagnostics");
 
-async function generateInterViewReportController(req, res) {
+async function generateInterViewReportController(req, res, next) {
+  req.failureStage = "request_validation";
   const { selfDescription, jobDescription } = req.body ?? {};
 
   if (
@@ -38,40 +40,92 @@ async function generateInterViewReportController(req, res) {
 
   let resume = "";
   if (req.file) {
+    req.failureStage = "resume_validation";
     const pdfHeader = Buffer.from("%PDF-");
     if (!req.file.buffer.subarray(0, 1024).includes(pdfHeader)) {
+      logRequestFailure(req, {
+        stage: "resume_validation",
+        status: 400,
+        code: "INVALID_PDF_SIGNATURE",
+      });
       return res.status(400).json({
         message: "The uploaded file is not a valid PDF resume.",
       });
     }
 
     try {
-      const parsedResume = await new pdfParse.PDFParse(
-        Uint8Array.from(req.file.buffer),
-      ).getText();
-      resume = parsedResume.text;
+      req.failureStage = "resume_parsing";
+      const parsedResume = await new pdfParse.PDFParse({
+        data: Uint8Array.from(req.file.buffer),
+      }).getText();
+      resume = typeof parsedResume?.text === "string" ? parsedResume.text : "";
     } catch (error) {
-      console.warn("Resume PDF parsing failed:", error.name);
+      logRequestFailure(req, {
+        stage: "resume_parsing",
+        status: 400,
+        code: "PDF_PARSE_FAILED",
+      });
       return res.status(400).json({
         message: "We couldn't read this PDF. Choose a valid, text-readable PDF.",
       });
     }
+
+    if (!resume.trim() && !normalizedSelfDescription) {
+      logRequestFailure(req, {
+        stage: "resume_parsing",
+        status: 400,
+        code: "PDF_CONTAINS_NO_TEXT",
+      });
+      return res.status(400).json({
+        message: "We couldn't find readable text in this PDF. Choose a text-readable PDF or provide a self-description.",
+      });
+    }
   }
 
-  const interViewReportByAi = await generateInterviewReport({
-    resume,
-    selfDescription: normalizedSelfDescription,
-    jobDescription: normalizedJobDescription,
-  });
+  req.failureStage = "ai_provider";
+  let interViewReportByAi;
+  try {
+    interViewReportByAi = await generateInterviewReport({
+      resume,
+      selfDescription: normalizedSelfDescription,
+      jobDescription: normalizedJobDescription,
+    });
+  } catch (error) {
+    return next(error);
+  }
 
-  const interviewReport = await interviewReportModel.create({
-    user: req.user.id,
-    resume,
-    selfDescription: normalizedSelfDescription,
-    jobDescription: normalizedJobDescription,
-    ...interViewReportByAi,
-  });
+  req.failureStage = "report_persistence";
+  let interviewReport;
+  try {
+    interviewReport = await interviewReportModel.create({
+      user: req.user.id,
+      resume,
+      selfDescription: normalizedSelfDescription,
+      jobDescription: normalizedJobDescription,
+      ...interViewReportByAi,
+    });
+  } catch (cause) {
+    const isDatabaseUnavailable = [
+      "MongoNetworkError",
+      "MongoServerSelectionError",
+      "MongoTimeoutError",
+    ].includes(cause.name);
+    const error = new Error(
+      isDatabaseUnavailable ? "Report database is unavailable." : "Report could not be saved.",
+    );
+    error.stage = "report_persistence";
+    error.failureCode = isDatabaseUnavailable
+      ? "REPORT_DATABASE_UNAVAILABLE"
+      : "REPORT_PERSISTENCE_FAILED";
+    error.httpStatus = isDatabaseUnavailable ? 503 : 500;
+    error.publicMessage = isDatabaseUnavailable
+      ? "Your plan was generated but couldn't be saved. Please try again later."
+      : "Your plan couldn't be saved. Please try again.";
+    error.cause = cause;
+    return next(error);
+  }
 
+  req.failureStage = "complete";
   res.status(201).json({
     message: "Interview report generated successfully.",
     interviewReport,

@@ -1,10 +1,17 @@
 const jwt = require("jsonwebtoken");
 const tokenBlacklistModel = require("../models/blacklist.model");
+const { logRequestFailure } = require("../utils/requestDiagnostics");
 
 async function authUser(req, res, next) {
+  req.failureStage = "authentication";
   const token = req.cookies.token;
 
   if (!token) {
+    logRequestFailure(req, {
+      stage: "authentication",
+      status: 401,
+      code: "AUTHENTICATION_REQUIRED",
+    });
     return res.status(401).json({
       message: "Token not provided.",
     });
@@ -15,6 +22,11 @@ async function authUser(req, res, next) {
   });
 
   if (isTokenBlacklisted) {
+    logRequestFailure(req, {
+      stage: "authentication",
+      status: 401,
+      code: "SESSION_REVOKED",
+    });
     return res.status(401).json({
       message: "token is invalid",
     });
@@ -27,6 +39,11 @@ async function authUser(req, res, next) {
 
     next();
   } catch (err) {
+    logRequestFailure(req, {
+      stage: "authentication",
+      status: 401,
+      code: "INVALID_SESSION",
+    });
     return res.status(401).json({
       message: "Invalid token.",
     });
