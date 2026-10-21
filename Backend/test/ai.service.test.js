@@ -6,6 +6,7 @@ const {
   SDK_METHOD,
   API_VERSION,
   API_BASE_URL,
+  parseRetryAfterMs,
 } = require("../src/services/ai.service");
 
 const validReport = {
@@ -26,21 +27,26 @@ const createServiceWithResponse = (response, options = {}) => {
   const requestTimeouts = [];
   const service = createAIService({
     apiKey: "test-key",
-    createClient: (key, timeout) => {
+    createClient: (key, timeout, onRetryAfter) => {
       assert.equal(key, "test-key");
       requestTimeouts.push(timeout);
       return {
-      models: {
-        generateContent: async (request) => {
-          requests.push(request);
-          const result =
-            typeof response === "function" ? response(requests.length) : response;
-          if (result instanceof Error) {
-            throw result;
-          }
-          return result;
+        models: {
+          generateContent: async (request) => {
+            requests.push(request);
+            const result =
+              typeof response === "function"
+                ? response(requests.length)
+                : response;
+            if (result instanceof Error) {
+              if (Number.isFinite(result.retryAfterMs)) {
+                onRetryAfter(result.retryAfterMs);
+              }
+              throw result;
+            }
+            return result;
+          },
         },
-      },
       };
     },
     sleep: async () => {},
@@ -164,6 +170,83 @@ test("retries a transient 503 and succeeds without retrying a 404", async (t) =>
     );
     assert.equal(requests.length, 1);
   });
+});
+
+test("honors provider Retry-After without exceeding the retry budget", async () => {
+  const waits = [];
+  const unavailable = Object.assign(new Error("busy"), {
+    status: 503,
+    retryAfterMs: 1_500,
+  });
+  const { service } = createServiceWithResponse(
+    (attempt) =>
+      attempt === 1 ? unavailable : { text: JSON.stringify(validReport) },
+    { sleep: async (milliseconds) => waits.push(milliseconds) },
+  );
+
+  const report = await service.generateInterviewReport({
+    resume: "",
+    selfDescription: "Profile",
+    jobDescription: "Role",
+  });
+
+  assert.deepEqual(report, validReport);
+  assert.deepEqual(waits, [1_500]);
+});
+
+test("parses Retry-After seconds and HTTP dates", () => {
+  const nowMs = Date.parse("2026-10-22T00:00:00.000Z");
+
+  assert.equal(parseRetryAfterMs("2", nowMs), 2_000);
+  assert.equal(
+    parseRetryAfterMs("Thu, 22 Oct 2026 00:00:03 GMT", nowMs),
+    3_000,
+  );
+  assert.equal(parseRetryAfterMs("invalid", nowMs), undefined);
+});
+
+test("extracts provider status codes and safe message summaries", async (t) => {
+  const cases = [
+    [
+      404,
+      "NOT_FOUND",
+      "Provider could not find the requested model or API resource.",
+      "models/gemini-3.8-flash was not found; private detail",
+    ],
+    [
+      503,
+      "UNAVAILABLE",
+      "Provider reports temporary high demand.",
+      "Model is experiencing high demand; private detail",
+    ],
+  ];
+
+  for (const [status, providerCode, providerMessage, message] of cases) {
+    await t.test(`provider ${status}`, async () => {
+      const cause = Object.assign(
+        new Error(JSON.stringify({
+          error: { status: providerCode, message },
+        })),
+        { status },
+      );
+      const { service } = createServiceWithResponse(cause);
+
+      await assert.rejects(
+        service.generateInterviewReport({
+          resume: "private resume",
+          selfDescription: "",
+          jobDescription: "Role",
+        }),
+        (error) => {
+          assert.equal(error.providerCode, providerCode);
+          assert.equal(error.providerMessage, providerMessage);
+          assert.equal(error.providerMessage.includes("private detail"), false);
+          assert.equal(error.providerMessage.includes("private resume"), false);
+          return true;
+        },
+      );
+    });
+  }
 });
 
 test("enforces the total provider deadline across attempts", async () => {

@@ -105,9 +105,21 @@ const toGeminiJsonSchema = (schema) => {
 };
 
 const safeProviderCode = (cause, status) => {
+  let responseError;
+  if (typeof cause?.message === "string") {
+    try {
+      responseError = JSON.parse(cause.message)?.error;
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
+    }
+  }
+
   const candidate =
     cause?.error?.status ??
     cause?.response?.data?.error?.status ??
+    responseError?.status ??
     cause?.code;
   if (typeof candidate === "string" && /^[A-Z0-9_]{1,64}$/.test(candidate)) {
     return candidate;
@@ -126,6 +138,20 @@ const safeProviderCode = (cause, status) => {
       504: "DEADLINE_EXCEEDED",
     }[status] || "UPSTREAM_ERROR"
   );
+};
+
+const parseRetryAfterMs = (value, nowMs = Date.now()) => {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) {
+    return Math.max(0, seconds * 1000);
+  }
+
+  const retryAt = Date.parse(value);
+  return Number.isFinite(retryAt) ? Math.max(0, retryAt - nowMs) : undefined;
 };
 
 const createAIServiceError = ({
@@ -154,8 +180,27 @@ const createAIServiceError = ({
   return error;
 };
 
-const safeProviderMessage = (status) =>
-  ({
+const safeProviderMessage = (status, cause) => {
+  let providerMessage = "";
+  if (typeof cause?.message === "string") {
+    try {
+      providerMessage = JSON.parse(cause.message)?.error?.message || "";
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
+    }
+  }
+
+  if (status === 503 && /high demand|overload/i.test(providerMessage)) {
+    return "Provider reports temporary high demand.";
+  }
+  if (status === 429 && /quota|rate limit|resource exhausted/i.test(providerMessage)) {
+    return "Provider reports a quota or rate limit.";
+  }
+
+  return (
+    {
     400: "Provider rejected the generation request.",
     401: "Provider authentication failed.",
     403: "Provider denied access to the model.",
@@ -165,7 +210,9 @@ const safeProviderMessage = (status) =>
     500: "Provider returned an internal error.",
     503: "Provider is temporarily unavailable.",
     504: "Provider request timed out.",
-  })[status] || "Provider request failed.";
+    }[status] || "Provider request failed."
+  );
+};
 
 const classifyProviderError = (cause) => {
   const providerStatus = Number(cause?.status ?? cause?.statusCode);
@@ -173,7 +220,7 @@ const classifyProviderError = (cause) => {
   const normalizedProviderStatus = Number.isFinite(providerStatus)
     ? providerStatus
     : undefined;
-  const providerMessage = safeProviderMessage(normalizedProviderStatus);
+  const providerMessage = safeProviderMessage(normalizedProviderStatus, cause);
 
   if (providerStatus === 401) {
     return createAIServiceError({
@@ -288,7 +335,7 @@ const classifyProviderError = (cause) => {
 
 const createAIService = ({
   apiKey = process.env.GOOGLE_GENAI_API_KEY,
-  createClient = (key, timeout) =>
+  createClient = (key, timeout, onRetryAfter) =>
     new GoogleGenAI({
       apiKey: key,
       httpOptions: {
@@ -296,6 +343,18 @@ const createAIService = ({
         apiVersion: API_VERSION,
         timeout,
         retryOptions: { attempts: 1 },
+        fetch: async (input, init) => {
+          const response = await fetch(input, init);
+          if (response.status === 429 || response.status === 503) {
+            const retryAfterMs = parseRetryAfterMs(
+              response.headers.get("retry-after"),
+            );
+            if (retryAfterMs !== undefined) {
+              onRetryAfter(retryAfterMs);
+            }
+          }
+          return response;
+        },
       },
     }),
   sleep = (milliseconds) =>
@@ -303,7 +362,10 @@ const createAIService = ({
   random = Math.random,
   now = Date.now,
 } = {}) => {
-  const getClient = (timeout = AI_ATTEMPT_TIMEOUT_MS) => {
+  const getClient = (
+    timeout = AI_ATTEMPT_TIMEOUT_MS,
+    onRetryAfter = () => {},
+  ) => {
     if (!apiKey) {
       throw createAIServiceError({
         stage: "ai_configuration",
@@ -314,7 +376,7 @@ const createAIService = ({
       });
     }
 
-    return createClient(apiKey, timeout);
+    return createClient(apiKey, timeout, onRetryAfter);
   };
 
   const generateWithRetry = async (request) => {
@@ -327,10 +389,15 @@ const createAIService = ({
         break;
       }
 
+      let providerRetryAfterMs;
       try {
-        return await getClient(
+        const client = getClient(
           Math.min(AI_ATTEMPT_TIMEOUT_MS, remainingMs),
-        ).models.generateContent(request);
+          (delayMs) => {
+            providerRetryAfterMs = delayMs;
+          },
+        );
+        return await client.models.generateContent(request);
       } catch (cause) {
         if (cause?.failureCode) {
           throw cause;
@@ -357,15 +424,18 @@ const createAIService = ({
           AI_RETRY_MAX_DELAY_MS,
           AI_RETRY_INITIAL_DELAY_MS * 2 ** (attempt - 1),
         );
-        const delayMs = Math.min(
-          AI_RETRY_MAX_DELAY_MS,
-          delayCeiling * (0.5 + random()),
+        const delayMs = Math.max(
+          providerRetryAfterMs || 0,
+          Math.min(
+            AI_RETRY_MAX_DELAY_MS,
+            delayCeiling * (0.5 + random()),
+          ),
         );
         const delayBudget = deadline - now();
-        if (delayBudget <= 0) {
-          break;
+        if (delayBudget <= 0 || delayMs > delayBudget) {
+          throw lastError;
         }
-        await sleep(Math.min(delayMs, delayBudget));
+        await sleep(delayMs);
       }
     }
 
@@ -475,4 +545,5 @@ module.exports = {
   SDK_METHOD,
   API_VERSION,
   API_BASE_URL,
+  parseRetryAfterMs,
 };
