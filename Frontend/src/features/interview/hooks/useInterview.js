@@ -49,6 +49,37 @@ const isValidInterviewReport = (report) =>
       ["low", "medium", "high"].includes(gap.severity),
   );
 
+const getRequestErrorMessage = (err, fallback) => {
+  const status = err.response?.status;
+
+  if (status === 401) {
+    return "Your session has expired. Sign in again, then retry generating your plan.";
+  }
+  if (status === 403) {
+    return "You don't have permission to generate this interview plan.";
+  }
+  if (status === 413) {
+    return "Your request is too large. Choose a PDF no larger than 3 MB.";
+  }
+  if (status === 429) {
+    return (
+      err.response?.data?.message ||
+      "The interview plan service is busy. Please wait a moment and try again."
+    );
+  }
+  if (status >= 500) {
+    return (
+      err.response?.data?.message ||
+      "The interview plan service is temporarily unavailable. Please try again shortly."
+    );
+  }
+  if (err.request && !err.response) {
+    return "We couldn't reach the interview plan service. Check your connection and try again.";
+  }
+
+  return err.response?.data?.message || err.message || fallback;
+};
+
 export const useInterview = () => {
   const context = useContext(InterviewContext);
   const { interviewId } = useParams();
@@ -99,10 +130,10 @@ export const useInterview = () => {
 
       return newReport;
     } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to generate interview report";
+      const message = getRequestErrorMessage(
+        err,
+        "Failed to generate interview report",
+      );
 
       setError(message);
       setReportStatus("error");
@@ -145,10 +176,10 @@ export const useInterview = () => {
 
       return interviewReport;
     } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to load interview report";
+      const message = getRequestErrorMessage(
+        err,
+        "Failed to load interview report",
+      );
 
       if (requestId === reportRequestId.current) {
         setReport(null);
@@ -193,10 +224,10 @@ export const useInterview = () => {
 
       return interviewReports;
     } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to load interview reports";
+      const message = getRequestErrorMessage(
+        err,
+        "Failed to load interview reports",
+      );
 
       setReports([]);
       setError(message);
@@ -239,10 +270,10 @@ export const useInterview = () => {
       }, 1000);
       return true;
     } catch (err) {
-      const message =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to download resume PDF";
+      const message = getRequestErrorMessage(
+        err,
+        "Failed to download resume PDF",
+      );
       setError(message);
       console.error("Download resume failed:", message);
       if (url) {

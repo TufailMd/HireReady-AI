@@ -45,10 +45,17 @@ async function generateInterViewReportController(req, res) {
       });
     }
 
-    const parsedResume = await new pdfParse.PDFParse(
-      Uint8Array.from(req.file.buffer),
-    ).getText();
-    resume = parsedResume.text;
+    try {
+      const parsedResume = await new pdfParse.PDFParse(
+        Uint8Array.from(req.file.buffer),
+      ).getText();
+      resume = parsedResume.text;
+    } catch (error) {
+      console.warn("Resume PDF parsing failed:", error.name);
+      return res.status(400).json({
+        message: "We couldn't read this PDF. Choose a valid, text-readable PDF.",
+      });
+    }
   }
 
   const interViewReportByAi = await generateInterviewReport({

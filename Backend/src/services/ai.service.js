@@ -98,22 +98,50 @@ async function generateInterviewReport({
   selfDescription,
   jobDescription,
 }) {
+  if (!process.env.GOOGLE_GENAI_API_KEY) {
+    const error = new Error("AI generation is not configured.");
+    error.status = 503;
+    error.code = "AI_CONFIGURATION_MISSING";
+    error.publicMessage =
+      "Interview plan generation is temporarily unavailable. Please try again later.";
+    throw error;
+  }
+
   const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
                         Job Description: ${jobDescription}
 `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.8-flash",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: zodToJsonSchema(interviewReportSchema),
-    },
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: zodToJsonSchema(interviewReportSchema),
+      },
+    });
 
-  return JSON.parse(response.text);
+    return interviewReportSchema.parse(JSON.parse(response.text));
+  } catch (cause) {
+    const upstreamStatus = Number(cause.status ?? cause.statusCode);
+    const isRateLimited = upstreamStatus === 429;
+    const error = new Error("Interview report generation failed.");
+    error.status = isRateLimited ? 429 : 502;
+    error.code = cause.name === "SyntaxError" || cause.name === "ZodError"
+      ? "AI_INVALID_RESPONSE"
+      : "AI_PROVIDER_FAILURE";
+    error.upstreamStatus = Number.isFinite(upstreamStatus)
+      ? upstreamStatus
+      : undefined;
+    error.publicMessage = isRateLimited
+      ? "The interview plan service is busy. Please wait a moment and try again."
+      : error.code === "AI_INVALID_RESPONSE"
+        ? "The interview plan service returned an invalid response. Please try again."
+        : "The interview plan service is temporarily unavailable. Please try again shortly.";
+    throw error;
+  }
 }
 
 async function generatePdfFromHtml(htmlContent) {
@@ -159,7 +187,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                     `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash",
     contents: prompt,
     config: {
       responseMimeType: "application/json",

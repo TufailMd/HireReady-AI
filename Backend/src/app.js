@@ -34,7 +34,9 @@ app.use((err, req, res, next) => {
   }
 
   if (err.message === "Only PDF resumes are supported.") {
-    return res.status(400).json({ message: err.message });
+    return res.status(400).json({
+      message: "Choose a PDF resume no larger than 3MB.",
+    });
   }
 
   if (err.type === "entity.parse.failed") {
@@ -45,7 +47,20 @@ app.use((err, req, res, next) => {
     return res.status(413).json({ message: "Request body is too large." });
   }
 
-  console.error("Request failed:", err.message);
+  if (err.publicMessage) {
+    console.error("Interview generation failed:", {
+      code: err.code || "AI_PROVIDER_FAILURE",
+      upstreamStatus: err.upstreamStatus,
+    });
+    return res.status(err.status || 502).json({ message: err.publicMessage });
+  }
+
+  console.error("Request failed:", {
+    method: req.method,
+    path: req.path,
+    name: err.name,
+    code: err.code,
+  });
   return res.status(500).json({ message: "An unexpected server error occurred." });
 });
 

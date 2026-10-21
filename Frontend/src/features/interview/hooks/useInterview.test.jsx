@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { InterviewProvider } from "../interview.context";
 import {
+  generateInterviewReport,
   generateResumePdf,
   getAllInterviewReports,
   getInterviewReportById,
@@ -33,6 +34,7 @@ const InterviewProbe = () => {
     error,
     getReportById,
     getResumePdf,
+    generateReport,
   } = useInterview();
 
   return (
@@ -40,6 +42,11 @@ const InterviewProbe = () => {
       <output data-testid="status">{reportStatus}</output>
       <output data-testid="report-id">{report?._id || "none"}</output>
       <output data-testid="error">{error || ""}</output>
+      <button onClick={() => generateReport({
+        jobDescription: "Role",
+        selfDescription: "",
+        resumeFile: null,
+      })}>Generate test report</button>
       <button onClick={() => getReportById("report-1")}>Retry report</button>
       <button onClick={() => getResumePdf("report-1")}>Download PDF</button>
     </>
@@ -62,6 +69,7 @@ const renderInterview = () =>
 
 describe("useInterview", () => {
   beforeEach(() => {
+    generateInterviewReport.mockResolvedValue({ interviewReport: validReport });
     getAllInterviewReports.mockResolvedValue({ interviewReports: [] });
     getInterviewReportById.mockResolvedValue({ interviewReport: validReport });
     generateResumePdf.mockResolvedValue(new Blob(["pdf"]));
@@ -109,7 +117,7 @@ describe("useInterview", () => {
     await waitFor(() => {
       expect(screen.getByTestId("status").textContent).toBe("error");
     });
-    expect(screen.getByTestId("error").textContent).toBe("Session expired");
+    expect(screen.getByTestId("error").textContent).toMatch(/session has expired/i);
 
     fireEvent.click(screen.getByRole("button", { name: "Retry report" }));
 
@@ -136,5 +144,47 @@ describe("useInterview", () => {
     });
 
     expect(screen.getByTestId("status").textContent).toBe("success");
+  });
+
+  it("shows a retryable rate-limit error from report generation", async () => {
+    generateInterviewReport.mockRejectedValue({
+      response: {
+        status: 429,
+        data: { message: "Plan service rate limited" },
+      },
+    });
+    renderInterview();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status").textContent).toBe("success");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate test report" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status").textContent).toBe("error");
+      expect(screen.getByTestId("error").textContent).toBe(
+        "Plan service rate limited",
+      );
+    });
+  });
+
+  it("shows a useful message for a network failure", async () => {
+    generateInterviewReport.mockRejectedValue({
+      request: {},
+    });
+    renderInterview();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("status").textContent).toBe("success");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate test report" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("error").textContent).toMatch(
+        /couldn't reach the interview plan service/i,
+      );
+    });
   });
 });
