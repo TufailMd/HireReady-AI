@@ -30,6 +30,13 @@ export const useInterview = () => {
     setReportStatus,
   } = context;
 
+  console.log("Interview context check:", {
+    setReportStatus,
+    setError,
+    setReport,
+    setLoading,
+  });
+
   // Generate interview report
   const generateReport = async ({
     jobDescription,

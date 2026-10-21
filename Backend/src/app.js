@@ -13,7 +13,7 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: "https://hireready-ai-1-ouci.onrender.com",
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
