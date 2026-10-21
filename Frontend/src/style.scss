@@ -18,3 +18,20 @@ body,
 .highlight{
     color: #d20d3b;
 }
+
+.route-error {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    text-align: center;
+
+    section {
+        display: grid;
+        gap: 1rem;
+    }
+
+    a {
+        color: #e1034d;
+    }
+}

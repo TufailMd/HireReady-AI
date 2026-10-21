@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 import { InterviewContext } from "../interview.context";
 import { useParams } from "react-router";
 
@@ -9,9 +9,50 @@ import {
   generateResumePdf,
 } from "../services/interview.api";
 
+const isValidInterviewReport = (report) =>
+  report &&
+  typeof report._id === "string" &&
+  typeof report.title === "string" &&
+  Number.isFinite(report.matchScore) &&
+  report.matchScore >= 0 &&
+  report.matchScore <= 100 &&
+  Array.isArray(report.technicalQuestions) &&
+  report.technicalQuestions.every(
+    (question) =>
+      question &&
+      typeof question.question === "string" &&
+      typeof question.intention === "string" &&
+      typeof question.answer === "string",
+  ) &&
+  Array.isArray(report.behavioralQuestions) &&
+  report.behavioralQuestions.every(
+    (question) =>
+      question &&
+      typeof question.question === "string" &&
+      typeof question.intention === "string" &&
+      typeof question.answer === "string",
+  ) &&
+  Array.isArray(report.preparationPlan) &&
+  report.preparationPlan.every(
+    (day) =>
+      day &&
+      Number.isFinite(day.day) &&
+      typeof day.focus === "string" &&
+      Array.isArray(day.tasks) &&
+      day.tasks.every((task) => typeof task === "string"),
+  ) &&
+  Array.isArray(report.skillGaps) &&
+  report.skillGaps.every(
+    (gap) =>
+      gap &&
+      typeof gap.skill === "string" &&
+      ["low", "medium", "high"].includes(gap.severity),
+  );
+
 export const useInterview = () => {
   const context = useContext(InterviewContext);
   const { interviewId } = useParams();
+  const reportRequestId = useRef(0);
 
   if (!context) {
     throw new Error("useInterview must be used within an InterviewProvider");
@@ -29,13 +70,6 @@ export const useInterview = () => {
     reportStatus,
     setReportStatus,
   } = context;
-
-  console.log("Interview context check:", {
-    setReportStatus,
-    setError,
-    setReport,
-    setLoading,
-  });
 
   // Generate interview report
   const generateReport = async ({
@@ -82,7 +116,9 @@ export const useInterview = () => {
   };
 
   // Get a single report
-  const getReportById = async (id) => {
+  const getReportById = useCallback(async (id) => {
+    const requestId = ++reportRequestId.current;
+
     if (!id) {
       setError("Interview report ID is missing");
       setReportStatus("error");
@@ -98,12 +134,14 @@ export const useInterview = () => {
       const response = await getInterviewReportById(id);
       const interviewReport = response?.interviewReport;
 
-      if (!interviewReport) {
-        throw new Error("Interview report not found");
+      if (!isValidInterviewReport(interviewReport)) {
+        throw new Error("Interview report is incomplete or malformed");
       }
 
-      setReport(interviewReport);
-      setReportStatus("success");
+      if (requestId === reportRequestId.current) {
+        setReport(interviewReport);
+        setReportStatus("success");
+      }
 
       return interviewReport;
     } catch (err) {
@@ -112,26 +150,44 @@ export const useInterview = () => {
         err.message ||
         "Failed to load interview report";
 
-      setReport(null);
-      setError(message);
-      setReportStatus("error");
+      if (requestId === reportRequestId.current) {
+        setReport(null);
+        setError(message);
+        setReportStatus("error");
+      }
 
       console.error("Get report failed:", message);
 
       return null;
     } finally {
-      setLoading(false);
+      if (requestId === reportRequestId.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [setError, setLoading, setReport, setReportStatus]);
 
   // Get all reports
-  const getReports = async () => {
+  const getReports = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await getAllInterviewReports();
-      const interviewReports = response?.interviewReports ?? [];
+      const interviewReports = response?.interviewReports;
+
+      if (
+        !Array.isArray(interviewReports) ||
+        !interviewReports.every(
+          (item) =>
+            item &&
+            typeof item._id === "string" &&
+            typeof item.title === "string" &&
+            Number.isFinite(item.matchScore) &&
+            Number.isFinite(Date.parse(item.createdAt)),
+        )
+      ) {
+        throw new Error("Interview reports are incomplete or malformed");
+      }
 
       setReports(interviewReports);
 
@@ -151,40 +207,50 @@ export const useInterview = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setError, setLoading, setReports]);
 
   // Download resume PDF
   const getResumePdf = async (interviewReportId) => {
-    setLoading(true);
+    setError(null);
+    let url;
+    let link;
 
     try {
+      if (!interviewReportId) {
+        throw new Error("Interview report ID is missing");
+      }
+
       const response = await generateResumePdf({
         interviewReportId,
       });
 
-      const url = window.URL.createObjectURL(
+      url = window.URL.createObjectURL(
         new Blob([response], { type: "application/pdf" }),
       );
 
-      const link = document.createElement("a");
+      link = document.createElement("a");
       link.href = url;
       link.download = `resume_${interviewReportId}.pdf`;
 
       document.body.appendChild(link);
       link.click();
-      link.remove();
-
-      // Revoke after the browser has started the download
       window.setTimeout(() => {
         window.URL.revokeObjectURL(url);
       }, 1000);
+      return true;
     } catch (err) {
-      console.error(
-        "Download resume failed:",
-        err.response?.data || err.message,
-      );
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to download resume PDF";
+      setError(message);
+      console.error("Download resume failed:", message);
+      if (url) {
+        window.URL.revokeObjectURL(url);
+      }
+      return false;
     } finally {
-      setLoading(false);
+      link?.remove();
     }
   };
 
@@ -193,11 +259,16 @@ export const useInterview = () => {
     if (interviewId) {
       getReportById(interviewId);
     } else {
+      reportRequestId.current += 1;
       setReport(null);
+      setError(null);
       setReportStatus("idle");
-      getReports();
+      void getReports();
     }
-  }, [interviewId]);
+    return () => {
+      reportRequestId.current += 1;
+    };
+  }, [getReportById, getReports, interviewId, setError, setReport, setReportStatus]);
 
   return {
     loading,

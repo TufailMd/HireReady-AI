@@ -2,11 +2,14 @@
 import { createContext, useEffect, useState } from "react";
 import { getMe } from "./services/auth.api";
 
+// Context and provider intentionally share this module.
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         let active = true;
@@ -24,6 +27,9 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 if (err.response?.status !== 401) {
+                    if (active) {
+                        setError("Unable to verify your session. Please try again.");
+                    }
                     console.error(
                         "Auth initialization failed:",
                         err.response?.data || err.message
@@ -45,7 +51,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider
-            value={{ user, setUser, loading, setLoading }}
+            value={{ user, setUser, loading, setLoading, error, setError }}
         >
             {children}
         </AuthContext.Provider>

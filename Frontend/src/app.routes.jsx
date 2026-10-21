@@ -4,23 +4,28 @@ import Register from "./features/auth/pages/Register";
 import Protected from "./features/auth/components/Protected";
 import Home from "./features/interview/pages/Home";
 import Interview from "./features/interview/pages/Interview";
+import RouteError from "./features/auth/components/RouteError";
 
 
 export const router = createBrowserRouter([
     {
         path: "/login",
-        element: <Login />
+        element: <Login />,
+        errorElement: <RouteError />
     },
     {
         path: "/register",
-        element: <Register />
+        element: <Register />,
+        errorElement: <RouteError />
     },
     {
         path: "/",
-        element: <Protected><Home /></Protected>
+        element: <Protected><Home /></Protected>,
+        errorElement: <RouteError />
     },
     {
         path:"/interview/:interviewId",
-        element: <Protected><Interview /></Protected>
+        element: <Protected><Interview /></Protected>,
+        errorElement: <RouteError />
     }
 ])

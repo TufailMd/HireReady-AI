@@ -9,10 +9,11 @@ export const useAuth = () => {
     throw new Error("useAuth must be used within AuthProvider");
   }
 
-  const { user, setUser, loading, setLoading } = context;
+  const { user, setUser, loading, setLoading, error, setError } = context;
 
   const handleLogin = async ({ email, password }) => {
     setLoading(true);
+    setError(null);
 
     try {
       const data = await login({ email, password });
@@ -24,7 +25,10 @@ export const useAuth = () => {
       setUser(data.user);
       return true;
     } catch (err) {
-      console.error("Login failed:", err.response?.data || err.message);
+      const message =
+        err.response?.data?.message || err.message || "Login failed";
+      setError(message);
+      console.error("Login failed:", message);
       return false;
     } finally {
       setLoading(false);
@@ -33,6 +37,7 @@ export const useAuth = () => {
 
   const handleRegister = async ({ username, email, password }) => {
     setLoading(true);
+    setError(null);
 
     try {
       const data = await register({ username, email, password });
@@ -44,7 +49,10 @@ export const useAuth = () => {
       setUser(data.user);
       return true;
     } catch (err) {
-      console.error("Registration failed:", err.response?.data || err.message);
+      const message =
+        err.response?.data?.message || err.message || "Registration failed";
+      setError(message);
+      console.error("Registration failed:", message);
       return false;
     } finally {
       setLoading(false);
@@ -53,13 +61,17 @@ export const useAuth = () => {
 
   const handleLogout = async () => {
     setLoading(true);
+    setError(null);
 
     try {
       await logout();
       setUser(null);
       return true;
     } catch (err) {
-      console.error("Logout failed:", err.response?.data || err.message);
+      const message =
+        err.response?.data?.message || err.message || "Logout failed";
+      setError(message);
+      console.error("Logout failed:", message);
       return false;
     } finally {
       setLoading(false);
@@ -69,6 +81,7 @@ export const useAuth = () => {
   return {
     user,
     loading,
+    error,
     handleLogin,
     handleRegister,
     handleLogout,

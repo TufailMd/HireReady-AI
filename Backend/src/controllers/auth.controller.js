@@ -3,6 +3,17 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const tokenBlacklistModel = require("../models/blacklist.model");
 
+const authCookieOptions = {
+  path: "/",
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+};
+const legacyAuthCookieOptions = {
+  ...authCookieOptions,
+  path: "/api/auth",
+};
+
 async function registerUserController(req, res) {
   const { username, email, password } = req.body;
 
@@ -36,7 +47,8 @@ async function registerUserController(req, res) {
     { expiresIn: "1d" },
   );
 
-  res.cookie("token", token);
+  res.clearCookie("token", legacyAuthCookieOptions);
+  res.cookie("token", token, authCookieOptions);
 
   res.status(201).json({
     message: "User registered successfully",
@@ -50,6 +62,12 @@ async function registerUserController(req, res) {
 
 async function loginUserController(req, res) {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "Please provide email and password.",
+    });
+  }
 
   const user = await userModel.findOne({ email });
 
@@ -73,7 +91,8 @@ async function loginUserController(req, res) {
     { expiresIn: "1d" },
   );
 
-  res.cookie("token", token);
+  res.clearCookie("token", legacyAuthCookieOptions);
+  res.cookie("token", token, authCookieOptions);
   res.status(200).json({
     message: "User loggedIn successfully.",
     user: {
@@ -91,7 +110,8 @@ async function logoutUserController(req, res) {
     await tokenBlacklistModel.create({ token });
   }
 
-  res.clearCookie("token");
+  res.clearCookie("token", legacyAuthCookieOptions);
+  res.clearCookie("token", authCookieOptions);
 
   res.status(200).json({
     message: "User logged out successfully",
@@ -100,6 +120,12 @@ async function logoutUserController(req, res) {
 
 async function getMeController(req, res) {
   const user = await userModel.findById(req.user.id);
+
+  if (!user) {
+    return res.status(401).json({
+      message: "User session is no longer valid.",
+    });
+  }
 
   res.status(200).json({
     message: "User details fetched successfully",

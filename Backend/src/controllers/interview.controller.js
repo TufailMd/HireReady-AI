@@ -6,22 +6,62 @@ const {
 const interviewReportModel = require("../models/interviewReport.model");
 
 async function generateInterViewReportController(req, res) {
-  const resumeContent = await new pdfParse.PDFParse(
-    Uint8Array.from(req.file.buffer),
-  ).getText();
-  const { selfDescription, jobDescription } = req.body;
+  const { selfDescription, jobDescription } = req.body ?? {};
+
+  if (
+    typeof jobDescription !== "string" ||
+    (selfDescription !== undefined && typeof selfDescription !== "string")
+  ) {
+    return res.status(400).json({
+      message: "Job description and self-description must be text.",
+    });
+  }
+
+  const normalizedJobDescription = jobDescription?.trim();
+  const normalizedSelfDescription = selfDescription?.trim();
+
+  if (
+    !normalizedJobDescription ||
+    normalizedJobDescription.length > 5000 ||
+    (normalizedSelfDescription && normalizedSelfDescription.length > 5000)
+  ) {
+    return res.status(400).json({
+      message: "Job and self descriptions must be at most 5000 characters.",
+    });
+  }
+
+  if (!req.file && !normalizedSelfDescription) {
+    return res.status(400).json({
+      message: "Upload a PDF resume or provide a self-description.",
+    });
+  }
+
+  let resume = "";
+  if (req.file) {
+    const pdfHeader = Buffer.from("%PDF-");
+    if (!req.file.buffer.subarray(0, 1024).includes(pdfHeader)) {
+      return res.status(400).json({
+        message: "The uploaded file is not a valid PDF resume.",
+      });
+    }
+
+    const parsedResume = await new pdfParse.PDFParse(
+      Uint8Array.from(req.file.buffer),
+    ).getText();
+    resume = parsedResume.text;
+  }
 
   const interViewReportByAi = await generateInterviewReport({
-    resume: resumeContent.text,
-    selfDescription,
-    jobDescription,
+    resume,
+    selfDescription: normalizedSelfDescription,
+    jobDescription: normalizedJobDescription,
   });
 
   const interviewReport = await interviewReportModel.create({
     user: req.user.id,
-    resume: resumeContent.text,
-    selfDescription,
-    jobDescription,
+    resume,
+    selfDescription: normalizedSelfDescription,
+    jobDescription: normalizedJobDescription,
     ...interViewReportByAi,
   });
 
@@ -68,8 +108,10 @@ async function getAllInterviewReportsController(req, res) {
 async function generateResumePdfController(req, res) {
   const { interviewReportId } = req.params;
 
-  const interviewReport =
-    await interviewReportModel.findById(interviewReportId);
+  const interviewReport = await interviewReportModel.findOne({
+    _id: interviewReportId,
+    user: req.user.id,
+  });
 
   if (!interviewReport) {
     return res.status(404).json({
