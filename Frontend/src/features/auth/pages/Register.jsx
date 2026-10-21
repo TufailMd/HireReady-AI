@@ -13,10 +13,18 @@ const Register = () => {
     const { loading, handleRegister } = useAuth()
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
-        await handleRegister({ username, email, password })
-        navigate("/")
-    }
+        e.preventDefault();
+
+        const success = await handleRegister({
+            username,
+            email,
+            password,
+        });
+
+        if (success) {
+            navigate("/");
+        }
+    };
 
     if (loading) {
         return <Loading message="Creating your account..." />

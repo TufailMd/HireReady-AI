@@ -1,12 +1,12 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { AuthContext } from "../auth.context";
-import { login, register, logout, getMe } from "../services/auth.api";
+import { login, register, logout } from "../services/auth.api";
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error("useAuth must be used within AuthContext.Provider");
+    throw new Error("useAuth must be used within AuthProvider");
   }
 
   const { user, setUser, loading, setLoading } = context;
@@ -16,10 +16,15 @@ export const useAuth = () => {
 
     try {
       const data = await login({ email, password });
+
+      if (!data?.user) {
+        throw new Error("Login response does not contain a user");
+      }
+
       setUser(data.user);
       return true;
     } catch (err) {
-      console.error("Login failed:", err);
+      console.error("Login failed:", err.response?.data || err.message);
       return false;
     } finally {
       setLoading(false);
@@ -31,10 +36,15 @@ export const useAuth = () => {
 
     try {
       const data = await register({ username, email, password });
+
+      if (!data?.user) {
+        throw new Error("Registration response does not contain a user");
+      }
+
       setUser(data.user);
       return true;
     } catch (err) {
-      console.error("Registration failed:", err);
+      console.error("Registration failed:", err.response?.data || err.message);
       return false;
     } finally {
       setLoading(false);
@@ -49,48 +59,18 @@ export const useAuth = () => {
       setUser(null);
       return true;
     } catch (err) {
-      console.error("Logout failed:", err);
+      console.error("Logout failed:", err.response?.data || err.message);
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    let active = true;
-
-    const getAndSetUser = async () => {
-      try {
-        const data = await getMe();
-
-        if (active) {
-          setUser(data.user);
-        }
-      } catch (err) {
-        if (active) {
-          setUser(null);
-        }
-
-        console.error("Failed to fetch current user:", err);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    getAndSetUser();
-
-    return () => {
-      active = false;
-    };
-  }, [setUser, setLoading]);
-
   return {
     user,
     loading,
-    handleRegister,
     handleLogin,
+    handleRegister,
     handleLogout,
   };
 };

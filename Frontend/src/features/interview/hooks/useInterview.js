@@ -1,12 +1,13 @@
+import { useContext, useEffect } from "react";
+import { InterviewContext } from "../interview.context";
+import { useParams } from "react-router";
+
 import {
   getAllInterviewReports,
   generateInterviewReport,
   getInterviewReportById,
   generateResumePdf,
 } from "../services/interview.api";
-import { useContext, useEffect } from "react";
-import { InterviewContext } from "../interview.context";
-import { useParams } from "react-router";
 
 export const useInterview = () => {
   const context = useContext(InterviewContext);
@@ -16,85 +17,177 @@ export const useInterview = () => {
     throw new Error("useInterview must be used within an InterviewProvider");
   }
 
-  const { loading, setLoading, report, setReport, reports, setReports } =
-    context;
+  const {
+    loading,
+    setLoading,
+    report,
+    setReport,
+    reports,
+    setReports,
+    error,
+    setError,
+    reportStatus,
+    setReportStatus,
+  } = context;
 
+  // Generate interview report
   const generateReport = async ({
     jobDescription,
     selfDescription,
     resumeFile,
   }) => {
     setLoading(true);
-    let response = null;
+    setError(null);
+    setReportStatus("loading");
+
     try {
-      response = await generateInterviewReport({
+      const response = await generateInterviewReport({
         jobDescription,
         selfDescription,
         resumeFile,
       });
-      setReport(response.interviewReport);
-    } catch (error) {
-      console.log(error);
+
+      const newReport = response?.interviewReport;
+
+      if (!newReport?._id) {
+        throw new Error("Interview report was not returned by the server");
+      }
+
+      setReport(newReport);
+      setReportStatus("success");
+
+      return newReport;
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to generate interview report";
+
+      setError(message);
+      setReportStatus("error");
+
+      console.error("Generate report failed:", message);
+
+      return null;
     } finally {
       setLoading(false);
     }
-
-    return response.interviewReport;
   };
 
-  const getReportById = async (interviewId) => {
+  // Get a single report
+  const getReportById = async (id) => {
+    if (!id) {
+      setError("Interview report ID is missing");
+      setReportStatus("error");
+      return null;
+    }
+
     setLoading(true);
-    let response = null;
+    setError(null);
+    setReport(null);
+    setReportStatus("loading");
+
     try {
-      response = await getInterviewReportById(interviewId);
-      setReport(response.interviewReport);
-    } catch (error) {
-      console.log(error);
+      const response = await getInterviewReportById(id);
+      const interviewReport = response?.interviewReport;
+
+      if (!interviewReport) {
+        throw new Error("Interview report not found");
+      }
+
+      setReport(interviewReport);
+      setReportStatus("success");
+
+      return interviewReport;
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to load interview report";
+
+      setReport(null);
+      setError(message);
+      setReportStatus("error");
+
+      console.error("Get report failed:", message);
+
+      return null;
     } finally {
       setLoading(false);
     }
-    return response.interviewReport;
   };
 
+  // Get all reports
   const getReports = async () => {
     setLoading(true);
-    let response = null;
+    setError(null);
+
     try {
-      response = await getAllInterviewReports();
-      setReports(response.interviewReports);
-    } catch (error) {
-      console.log(error);
+      const response = await getAllInterviewReports();
+      const interviewReports = response?.interviewReports ?? [];
+
+      setReports(interviewReports);
+
+      return interviewReports;
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to load interview reports";
+
+      setReports([]);
+      setError(message);
+
+      console.error("Get reports failed:", message);
+
+      return [];
     } finally {
       setLoading(false);
     }
-
-    return response.interviewReports;
   };
 
+  // Download resume PDF
   const getResumePdf = async (interviewReportId) => {
     setLoading(true);
-    let response = null;
+
     try {
-      response = await generateResumePdf({ interviewReportId });
+      const response = await generateResumePdf({
+        interviewReportId,
+      });
+
       const url = window.URL.createObjectURL(
         new Blob([response], { type: "application/pdf" }),
       );
+
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `resume_${interviewReportId}.pdf`);
+      link.download = `resume_${interviewReportId}.pdf`;
+
       document.body.appendChild(link);
       link.click();
-    } catch (error) {
-      console.log(error);
+      link.remove();
+
+      // Revoke after the browser has started the download
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (err) {
+      console.error(
+        "Download resume failed:",
+        err.response?.data || err.message,
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  // Load report for detail page, otherwise load report list
   useEffect(() => {
     if (interviewId) {
       getReportById(interviewId);
     } else {
+      setReport(null);
+      setReportStatus("idle");
       getReports();
     }
   }, [interviewId]);
@@ -103,6 +196,8 @@ export const useInterview = () => {
     loading,
     report,
     reports,
+    error,
+    reportStatus,
     generateReport,
     getReportById,
     getReports,

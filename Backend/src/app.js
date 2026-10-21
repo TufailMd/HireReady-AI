@@ -6,6 +6,11 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://hireready-ai-1-ouci.onrender.com",
+];
+
 app.use(
   cors({
     origin: "https://hireready-ai-1-ouci.onrender.com",

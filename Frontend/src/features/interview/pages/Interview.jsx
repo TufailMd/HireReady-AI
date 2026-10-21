@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import '../style/interview.scss'
-import { useInterview } from '../hooks/useInterview.js'
-import { useParams } from 'react-router'
-import Loading from '../../../features/auth/components/Loading.jsx'
-
-
+import { useState } from "react";
+import "../style/interview.scss";
+import { useInterview } from "../hooks/useInterview.js";
+import { useParams } from "react-router";
+import Loading from "../../../features/auth/components/Loading.jsx";
 
 const NAV_ITEMS = [
     { id: 'technical', label: 'Technical Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
@@ -57,26 +55,67 @@ const RoadMapDay = ({ day }) => (
 )
 
 const Interview = () => {
-    const [activeNav, setActiveNav] = useState('technical')
-    const { report, getReportById, loading, getResumePdf } = useInterview()
-    const { interviewId } = useParams()
+    const [activeNav, setActiveNav] = useState("technical");
 
-    useEffect(() => {
-        if (interviewId) {
-            getReportById(interviewId)
-        }
-    }, [interviewId])
+    const {
+        report,
+        loading,
+        error,
+        reportStatus,
+        getReportById,
+        getResumePdf,
+    } = useInterview();
 
+    const { interviewId } = useParams();
 
+    if (
+        reportStatus === "idle" ||
+        reportStatus === "loading" ||
+        loading
+    ) {
+        return <Loading message="Loading your interview plan..." />;
+    }
 
-    if (loading || !report) {
-        return <Loading message="Loading your interview plan..." />
+    // Error state
+    if (reportStatus === "error") {
+        return (
+            <div className="error-container">
+                <h2>Unable to Load Interview Plan</h2>
+                <p>{error || "Something went wrong. Please try again."}</p>
+
+                <button
+                    className="button primary-button"
+                    onClick={() => getReportById(interviewId)}
+                >
+                    Try Again
+                </button>
+            </div>
+        );
+    }
+
+    // Empty state
+    if (!report || report._id !== interviewId) {
+        return (
+            <div className="error-container">
+                <h2>Interview Report Not Found</h2>
+                <p>The requested interview plan could not be found.</p>
+
+                <button
+                    className="button primary-button"
+                    onClick={() => getReportById(interviewId)}
+                >
+                    Try Again
+                </button>
+            </div>
+        );
     }
 
     const scoreColor =
-        report.matchScore >= 80 ? 'score--high' :
-            report.matchScore >= 60 ? 'score--mid' : 'score--low'
-
+        report.matchScore >= 80
+            ? "score--high"
+            : report.matchScore >= 60
+                ? "score--mid"
+                : "score--low";
 
     return (
         <div className='interview-page'>
