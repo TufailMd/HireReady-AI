@@ -1,0 +1,66 @@
+$bg: #0d1117;
+$border: #232a36;
+$text: #e6e9ef;
+$muted: #8b93a3;
+$accent: #ff2d6f;
+
+.app-footer {
+    background: $bg;
+    border-top: 1px solid $border;
+    // margin-top: 3rem;
+
+    &__inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    &__name {
+        color: $text;
+        font-weight: 700;
+        font-size: 1.05rem;
+
+        span { color: $accent; }
+    }
+
+    &__tagline {
+        color: $muted;
+        font-size: 0.88rem;
+        margin-top: 0.35rem;
+        max-width: 22rem;
+    }
+
+    &__links {
+        display: flex;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+
+        a {
+            color: $muted;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.15s;
+
+            &:hover { color: $accent; }
+            &:focus-visible { outline: 2px solid $accent; outline-offset: 2px; border-radius: 2px; }
+        }
+    }
+
+    &__copy {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1.5rem 1.5rem;
+        color: $muted;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 720px) {
+    .app-footer__inner { padding: 1.5rem 1rem 1rem; }
+    .app-footer__copy { padding: 0 1rem 1.25rem; }
+}

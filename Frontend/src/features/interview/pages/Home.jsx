@@ -2,28 +2,83 @@ import React, { useState, useRef } from 'react'
 import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
+import Loader from '../../../components/common/Loader'
+
+const MAX_JD_CHARS = 5000
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const ALLOWED_EXT = ['.pdf', '.docx']
 
 const Home = () => {
 
-    const { loading, generateReport, reports } = useInterview()
+    const { loading, reportsLoaded, generateReport } = useInterview()
     const [jobDescription, setJobDescription] = useState("")
     const [selfDescription, setSelfDescription] = useState("")
-    const resumeInputRef = useRef()
+    const [resumeFile, setResumeFile] = useState(null)
+    const [dragging, setDragging] = useState(false)
+    const [error, setError] = useState("")
+    const resumeInputRef = useRef(null)
 
     const navigate = useNavigate()
 
-    const handleGenerateReport = async () => {
-        const resumeFile = resumeInputRef.current.files[0]
-        const data = await generateReport({ jobDescription, selfDescription, resumeFile })
-        navigate(`/interview/${data._id}`)
+    const validateAndSetFile = (file) => {
+        if (!file) return
+        const name = file.name.toLowerCase()
+        if (!ALLOWED_EXT.some(ext => name.endsWith(ext))) {
+            setError('Only PDF or DOCX files are allowed.')
+            return
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            setError('Resume must be 5MB or smaller.')
+            return
+        }
+        setError("")
+        setResumeFile(file)
     }
 
-    if (loading) {
-        return (
-            <main className='loading-screen'>
-                <h1>Loading your interview plan...</h1>
-            </main>
-        )
+    const handleFileChange = (e) => validateAndSetFile(e.target.files?.[0])
+
+    const handleDrop = (e) => {
+        e.preventDefault()
+        setDragging(false)
+        validateAndSetFile(e.dataTransfer.files?.[0])
+    }
+
+    const removeFile = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setResumeFile(null)
+        if (resumeInputRef.current) resumeInputRef.current.value = ""
+    }
+
+    const handleGenerateReport = async () => {
+        if (loading) return
+
+        if (!jobDescription.trim()) {
+            setError('Please paste the target job description.')
+            return
+        }
+        if (!resumeFile && !selfDescription.trim()) {
+            setError('Upload a resume or add a quick self-description.')
+            return
+        }
+
+        setError("")
+        try {
+            const data = await generateReport({
+                jobDescription: jobDescription.trim(),
+                selfDescription: selfDescription.trim(),
+                resumeFile
+            })
+            if (!data?._id) throw new Error('No report returned')
+            navigate(`/interview/${data._id}`)
+        } catch (err) {
+            console.error(err)
+            setError('Could not generate your interview plan. Please try again.')
+        }
+    }
+
+    if (!reportsLoaded) {
+        return <Loader message="Loading your interview plans..." variant="section" />
     }
 
     return (
@@ -49,12 +104,14 @@ const Home = () => {
                             <span className='badge badge--required'>Required</span>
                         </div>
                         <textarea
-                            onChange={(e) => { setJobDescription(e.target.value) }}
+                            value={jobDescription}
+                            onChange={(e) => setJobDescription(e.target.value)}
                             className='panel__textarea'
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
-                            maxLength={5000}
+                            maxLength={MAX_JD_CHARS}
+                            aria-label='Target job description'
                         />
-                        <div className='char-counter'>0 / 5000 chars</div>
+                        <div className='char-counter'>{jobDescription.length} / {MAX_JD_CHARS} chars</div>
                     </div>
 
                     {/* Vertical Divider */}
@@ -75,13 +132,42 @@ const Home = () => {
                                 Upload Resume
                                 <span className='badge badge--best'>Best Results</span>
                             </label>
-                            <label className='dropzone' htmlFor='resume'>
+                            <label
+                                className='dropzone'
+                                htmlFor='resume'
+                                style={dragging ? { borderColor: '#ff2d6f' } : undefined}
+                                onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                                onDragLeave={() => setDragging(false)}
+                                onDrop={handleDrop}
+                            >
                                 <span className='dropzone__icon'>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
                                 </span>
-                                <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
-                                <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
-                                <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
+                                {resumeFile ? (
+                                    <>
+                                        <p className='dropzone__title'>{resumeFile.name}</p>
+                                        <p className='dropzone__subtitle'>
+                                            {(resumeFile.size / 1024).toFixed(0)} KB &bull;{' '}
+                                            <button type='button' onClick={removeFile} style={{ background: 'none', border: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>
+                                                Remove
+                                            </button>
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
+                                        <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
+                                    </>
+                                )}
+                                <input
+                                    ref={resumeInputRef}
+                                    hidden
+                                    type='file'
+                                    id='resume'
+                                    name='resume'
+                                    accept='.pdf,.docx'
+                                    onChange={handleFileChange}
+                                />
                             </label>
                         </div>
 
@@ -92,7 +178,8 @@ const Home = () => {
                         <div className='self-description'>
                             <label className='section-label' htmlFor='selfDescription'>Quick Self-Description</label>
                             <textarea
-                                onChange={(e) => { setSelfDescription(e.target.value) }}
+                                value={selfDescription}
+                                onChange={(e) => setSelfDescription(e.target.value)}
                                 id='selfDescription'
                                 name='selfDescription'
                                 className='panel__textarea panel__textarea--short'
@@ -112,40 +199,27 @@ const Home = () => {
 
                 {/* Card Footer */}
                 <div className='interview-card__footer'>
-                    <span className='footer-info'>AI-Powered Strategy Generation &bull; Approx 30s</span>
+                    <span className='footer-info'>
+                        {error
+                            ? <span role='alert' style={{ color: '#ff6b81' }}>{error}</span>
+                            : <>AI-Powered Strategy Generation &bull; Approx 30s</>}
+                    </span>
                     <button
+                        type="button"
                         onClick={handleGenerateReport}
-                        className='generate-btn'>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
-                        Generate My Interview Strategy
+                        className="generate-btn"
+                        disabled={loading}
+                        aria-busy={loading}
+                    >
+                        {loading
+                            ? <Loader variant="inline" message="Generating..." />
+                            : "Generate My Interview Strategy"}
                     </button>
                 </div>
             </div>
 
-            {/* Recent Reports List */}
-            {reports.length > 0 && (
-                <section className='recent-reports'>
-                    <h2>My Recent Interview Plans</h2>
-                    <ul className='reports-list'>
-                        {reports.map(report => (
-                            <li key={report._id} className='report-item' onClick={() => navigate(`/interview/${report._id}`)}>
-                                <h3>{report.title || 'Untitled Position'}</h3>
-                                <p className='report-meta'>Generated on {new Date(report.createdAt).toLocaleDateString()}</p>
-                                <p className={`match-score ${report.matchScore >= 80 ? 'score--high' : report.matchScore >= 60 ? 'score--mid' : 'score--low'}`}>Match Score: {report.matchScore}%</p>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-            )}
-
-            {/* Page Footer */}
-            <footer className='page-footer'>
-                <a href='#'>Privacy Policy</a>
-                <a href='#'>Terms of Service</a>
-                <a href='#'>Help Center</a>
-            </footer>
         </div>
     )
 }
 
-export default Home
+export default Home;

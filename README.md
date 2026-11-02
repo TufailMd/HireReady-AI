@@ -109,7 +109,9 @@ Open `Backend/.env` and configure the required values:
 ```dotenv
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_long_random_secret
-GOOGLE_GENAI_API_KEY=your_google_genai_api_key
+GOOGLE_API_KEY=your_google_api_key
+GOOGLE_MODEL=<your-google-model>
+ALLOWED_ORIGIN=<your-allowed-origin-for-cors>
 ```
 
 Replace each placeholder with your actual configuration. Do not commit the `.env` file or expose your secrets in source code.
@@ -173,11 +175,13 @@ Both the frontend and backend must be running for the complete application to wo
 
 The backend loads environment variables from `Backend/.env` using `dotenv`.
 
-| Variable               | Required        | Description                         |
-| ---------------------- | --------------- | ----------------------------------- |
-| `MONGO_URI`            | Yes             | MongoDB connection string           |
-| `JWT_SECRET`           | Yes             | Secret used to sign and verify JWTs |
-| `GOOGLE_GENAI_API_KEY` | For AI features | API key for Google GenAI            |
+| Variable         | Required        | Description                         |
+| ---------------- | --------------- | ----------------------------------- |
+| `MONGO_URI`      | Yes             | MongoDB connection string           |
+| `JWT_SECRET`     | Yes             | Secret used to sign and verify JWTs |
+| `GOOGLE_API_KEY` | For AI features | API key for Google GenAI            |
+| `GOOGLE_MODEL`   | For AI features | Model name for Google GenAI         |
+| `ALLOWED_ORIGIN` | Yes             | Allowed origin for CORS             |
 
 The following settings are currently hard-coded in the application:
 

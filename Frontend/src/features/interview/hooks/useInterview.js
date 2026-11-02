@@ -4,20 +4,29 @@ import {
   getInterviewReportById,
   generateResumePdf,
 } from "../services/interview.api";
-import { useContext, useEffect } from "react";
-import { InterviewContext } from "../interview.context";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { InterviewContext } from "../context/interview.context";
 import { useParams } from "react-router";
 
 export const useInterview = () => {
   const context = useContext(InterviewContext);
   const { interviewId } = useParams();
+  const [error, setError] = useState(null);
 
   if (!context) {
     throw new Error("useInterview must be used within an InterviewProvider");
   }
 
-  const { loading, setLoading, report, setReport, reports, setReports } =
-    context;
+  const {
+    loading,
+    setLoading,
+    report,
+    setReport,
+    reports,
+    setReports,
+    reportsLoaded,
+    setReportsLoaded,
+  } = context;
 
   const generateReport = async ({
     jobDescription,
@@ -42,7 +51,7 @@ export const useInterview = () => {
     return response.interviewReport;
   };
 
-  const getReportById = async (interviewId) => {
+  const getReportById = useCallback(async (interviewId) => {
     setLoading(true);
     let response = null;
     try {
@@ -54,22 +63,27 @@ export const useInterview = () => {
       setLoading(false);
     }
     return response.interviewReport;
-  };
+  }, [setLoading, setReport]);
 
-  const getReports = async () => {
+  const getReports = useCallback(async () => {
     setLoading(true);
-    let response = null;
+    setError(null);
     try {
-      response = await getAllInterviewReports();
+      const response = await getAllInterviewReports();
+      if (!Array.isArray(response.interviewReports)) {
+        throw new Error("The interview plans response was invalid.");
+      }
       setReports(response.interviewReports);
+      return response.interviewReports;
     } catch (error) {
-      console.log(error);
+      console.error("Failed to load interview plans", error);
+      setError(error);
+      return null;
     } finally {
       setLoading(false);
+      setReportsLoaded(true);
     }
-
-    return response.interviewReports;
-  };
+  }, [setLoading, setReports, setReportsLoaded]);
 
   const getResumePdf = async (interviewReportId) => {
     setLoading(true);
@@ -97,12 +111,14 @@ export const useInterview = () => {
     } else {
       getReports();
     }
-  }, [interviewId]);
+  }, [interviewId, getReportById, getReports]);
 
   return {
     loading,
+    error,
     report,
     reports,
+    reportsLoaded,
     generateReport,
     getReportById,
     getReports,

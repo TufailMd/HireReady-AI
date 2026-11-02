@@ -1,2 +1,5 @@
 /.env
 /node_modules
+check-generation.js
+check-models.js
+temp.js

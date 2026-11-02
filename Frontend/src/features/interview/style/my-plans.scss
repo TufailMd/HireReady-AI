@@ -1,0 +1,370 @@
+$bg-page: #0d1117;
+$bg-card: #161b22;
+$bg-input: #0f141b;
+$border: #2a3348;
+$text: #e6edf3;
+$muted: #8b93a3;
+$accent: #ff2d78;
+$high: #3fb950;
+$mid: #d29922;
+$low: #f85149;
+
+.my-plans {
+    width: 100%;
+    min-height: 100%;
+    padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) 2rem;
+    background: $bg-page;
+    color: $text;
+    flex: 1;
+
+    &--state {
+        min-height: 60vh;
+        display: grid;
+        place-items: center;
+        text-align: center;
+    }
+
+    &__inner {
+        max-width: 1120px;
+        margin: 0 auto;
+    }
+
+    /* ---------- Top bar ---------- */
+    &__top {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.75rem;
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.7rem, 4vw, 2.2rem);
+            letter-spacing: -0.01em;
+        }
+
+        p {
+            margin: 0.35rem 0 0;
+            color: $muted;
+        }
+    }
+
+    &__btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 44px;
+        padding: 0.65rem 1.15rem;
+        border: 1px solid transparent;
+        border-radius: 0.6rem;
+        background: $accent;
+        color: #fff;
+        font: inherit;
+        font-weight: 650;
+        text-decoration: none;
+        cursor: pointer;
+        transition: filter 0.15s;
+
+        &:hover { filter: brightness(1.1); }
+        &:focus-visible { outline: 2px solid $text; outline-offset: 3px; }
+
+        &--ghost {
+            background: transparent;
+            border-color: $border;
+            color: $text;
+
+            &:hover { border-color: $accent; filter: none; }
+        }
+    }
+
+    /* ---------- Stats ---------- */
+    &__stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 0 0 1.5rem;
+
+        > div {
+            padding: 1rem 1.2rem;
+            border: 1px solid $border;
+            border-radius: 0.8rem;
+            background: $bg-card;
+        }
+
+        dt {
+            color: $muted;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        dd {
+            margin: 0.3rem 0 0;
+            font-size: clamp(1.5rem, 3.5vw, 2rem);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+
+            span {
+                margin-left: 0.1rem;
+                color: $muted;
+                font-size: 0.55em;
+                font-weight: 600;
+            }
+        }
+    }
+
+    /* ---------- Toolbar ---------- */
+    &__toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    &__search {
+        flex: 1 1 220px;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-height: 44px;
+        padding: 0 0.9rem;
+        border: 1px solid $border;
+        border-radius: 0.6rem;
+        background: $bg-input;
+        color: $muted;
+
+        &:focus-within { border-color: $accent; }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: $text;
+            font: inherit;
+
+            &::placeholder { color: $muted; }
+        }
+    }
+
+    &__chips {
+        display: flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+
+    &__chip {
+        min-height: 36px;
+        padding: 0.35rem 0.85rem;
+        border: 1px solid $border;
+        border-radius: 999px;
+        background: transparent;
+        color: $muted;
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: color 0.15s, border-color 0.15s, background 0.15s;
+
+        &:hover { color: $text; border-color: $muted; }
+        &:focus-visible { outline: 2px solid $accent; outline-offset: 2px; }
+
+        &--active {
+            color: $accent;
+            border-color: $accent;
+            background: rgba($accent, 0.1);
+        }
+    }
+
+    &__sort {
+        min-height: 44px;
+        padding: 0 0.8rem;
+        border: 1px solid $border;
+        border-radius: 0.6rem;
+        background: $bg-input;
+        color: $text;
+        font: inherit;
+        cursor: pointer;
+
+        &:focus-visible { outline: 2px solid $accent; outline-offset: 2px; }
+    }
+
+    &__count {
+        margin: 1.1rem 0 0.9rem;
+        color: $muted;
+        font-size: 0.85rem;
+    }
+
+    /* ---------- Grid ---------- */
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 1rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    /* ---------- Empty / message ---------- */
+    &__empty,
+    &__message {
+        width: min(100%, 560px);
+        margin: 2rem auto 0;
+        padding: clamp(1.5rem, 5vw, 3rem);
+        border: 1px dashed $border;
+        border-radius: 1rem;
+        background: $bg-card;
+        text-align: center;
+
+        h1, h2 {
+            margin: 1rem 0 0.5rem;
+            font-size: clamp(1.15rem, 3vw, 1.45rem);
+        }
+
+        p {
+            margin: 0 0 1rem;
+            color: $muted;
+            line-height: 1.6;
+        }
+
+        &--small { margin-top: 1rem; padding: 2rem 1.5rem; }
+    }
+
+    &__message { border-style: solid; }
+
+    &__empty-icon {
+        display: grid;
+        place-items: center;
+        width: 3.5rem;
+        height: 3.5rem;
+        margin: 0 auto;
+        border-radius: 0.8rem;
+        background: rgba($accent, 0.12);
+        color: $accent;
+    }
+}
+
+/* ---------- Plan card ---------- */
+.plan-card {
+    --tier: #{$accent};
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1.2rem 1.2rem 1.1rem;
+    border: 1px solid $border;
+    border-radius: 0.9rem;
+    background: $bg-card;
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 3px;
+        background: var(--tier);
+    }
+
+    &--high { --tier: #{$high}; }
+    &--mid { --tier: #{$mid}; }
+    &--low { --tier: #{$low}; }
+
+    &:hover {
+        border-color: var(--tier);
+        transform: translateY(-3px);
+    }
+
+    &:focus-visible { outline: 2px solid $accent; outline-offset: 3px; }
+
+    &__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    &__tier {
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--tier) 15%, transparent);
+        color: var(--tier);
+        font-size: 0.75rem;
+        font-weight: 650;
+    }
+
+    &__title {
+        margin: 1rem 0 0.4rem;
+        font-size: 1.05rem;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.7em;
+    }
+
+    &__meta {
+        margin: 0;
+        color: $muted;
+        font-size: 0.8rem;
+    }
+
+    &__cta {
+        margin-top: auto;
+        padding-top: 1.1rem;
+        color: var(--tier);
+        font-size: 0.88rem;
+        font-weight: 650;
+    }
+}
+
+.plan-ring {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+
+    svg { position: absolute; inset: 0; }
+
+    &__track {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.08);
+        stroke-width: 5;
+    }
+
+    &__bar {
+        fill: none;
+        stroke: var(--tier);
+        stroke-width: 5;
+        stroke-linecap: round;
+    }
+
+    &__value {
+        position: relative;
+        font-size: 1.05rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@media (max-width: 720px) {
+    .my-plans {
+        &__top { align-items: stretch; }
+        &__top .my-plans__btn { width: 100%; }
+        &__stats > div { padding: 0.8rem; }
+        &__chips { flex-wrap: nowrap; overflow-x: auto; width: 100%; padding-bottom: 0.25rem; }
+        &__chip { white-space: nowrap; }
+        &__sort { width: 100%; }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plan-card, .my-plans__btn, .my-plans__chip { transition: none; }
+    .plan-card:hover { transform: none; }
+}

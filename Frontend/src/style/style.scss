@@ -1,4 +1,8 @@
-@use "./style/button.scss";
+@use "./button.scss";
+
+:root {
+    --color-primary: #e1034d;
+}
 
 * {
     margin: 0%;

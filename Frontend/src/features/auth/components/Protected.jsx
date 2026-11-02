@@ -1,13 +1,12 @@
 import { useAuth } from "../hooks/useAuth";
 import { Navigate } from "react-router";
-import React from 'react'
+import Loader from "../../../components/common/Loader";
 
 const Protected = ({ children }) => {
-    const { loading, user } = useAuth()
+    const { initializing, user } = useAuth()
 
-
-    if (loading) {
-        return (<main><h1>Loading...</h1></main>)
+    if (initializing) {
+        return <Loader message="Checking your session..." variant="fullscreen" />
     }
 
     if (!user) {

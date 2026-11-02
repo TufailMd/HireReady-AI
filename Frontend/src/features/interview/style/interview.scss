@@ -21,7 +21,9 @@ $severity-low: #3fb950;
 
 // ── Page Shell ────────────────────────────────────────────────────────────────
 .interview-page {
+    position: relative;
     width: 100%;
+    min-width: 0;
     min-height: 100vh;
     background-color: $bg-page;
     color: $text-primary;
@@ -32,16 +34,27 @@ $severity-low: #3fb950;
     box-sizing: border-box;
 }
 
+.resume-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-width: 0;
+    padding-inline: 0.75rem;
+    white-space: nowrap;
+}
+
 // ── 3-Column Layout ───────────────────────────────────────────────────────────
 .interview-layout {
     display: flex;
     width: 100%;
+    min-width: 0;
     max-width: 1280px;
     margin: 0 auto;
     background-color: $bg-card;
     border: 1px solid $border-color;
     border-radius: 1rem;
-    justify-content: space-between;
+    justify-content: flex-start;
 }
 
 .interview-divider {
@@ -50,10 +63,15 @@ $severity-low: #3fb950;
     flex-shrink: 0;
 }
 
+.interview-layout > * {
+    min-width: 0;
+}
+
 // ── Left Nav ─────────────────────────────────────────────────────────────────
 .interview-nav {
     width: 220px;
     flex-shrink: 0;
+    min-width: 0;
     padding: 1.75rem 1rem;
     display: flex;
     flex-direction: column;
@@ -113,28 +131,24 @@ $severity-low: #3fb950;
 
 // ── Center Content ────────────────────────────────────────────────────────────
 .interview-content {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
     padding: 1.75rem 2rem;
     overflow-y: auto;
     min-height: initial;
     max-height: calc(100vh - 3rem);
     padding-bottom: 5rem;
     align-items: flex-start;
-
-
-
-
-
-
-
-
     section {
         min-height: 100%;
+        min-width: 0;
     }
 }
 
 .content-header {
     display: flex;
+    min-width: 0;
     align-items: baseline;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
@@ -142,6 +156,7 @@ $severity-low: #3fb950;
     border-bottom: 1px solid $border-color;
 
     h2 {
+        min-width: 0;
         font-size: 1.1rem;
         font-weight: 700;
         color: $text-primary;
@@ -149,6 +164,7 @@ $severity-low: #3fb950;
     }
 
     &__count {
+        flex: 0 0 auto;
         font-size: 0.8rem;
         color: $text-muted;
         background-color: $bg-panel;
@@ -161,11 +177,13 @@ $severity-low: #3fb950;
 // ── Question Cards ────────────────────────────────────────────────────────────
 .q-list {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 0.75rem;
 }
 
 .q-card {
+    min-width: 0;
     background-color: $bg-panel;
     border: 1px solid $border-color;
     border-radius: 0.6rem;
@@ -178,11 +196,23 @@ $severity-low: #3fb950;
 
     &__header {
         display: flex;
+        width: 100%;
+        min-width: 0;
         align-items: flex-start;
         gap: 0.75rem;
         padding: 0.9rem 1rem;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
         cursor: pointer;
         user-select: none;
+
+        &:focus-visible {
+            outline: 2px solid $accent;
+            outline-offset: -3px;
+        }
     }
 
     &__index {
@@ -199,11 +229,13 @@ $severity-low: #3fb950;
 
     &__question {
         flex: 1;
+        min-width: 0;
         margin: 0;
         font-size: 0.9rem;
         font-weight: 500;
         color: $text-primary;
         line-height: 1.5;
+        overflow-wrap: anywhere;
     }
 
     &__chevron {
@@ -219,12 +251,17 @@ $severity-low: #3fb950;
     }
 
     &__body {
+        min-width: 0;
         padding: 0 1rem 1rem;
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
         border-top: 1px solid $border-color;
         padding-top: 0.75rem;
+
+        &[hidden] {
+            display: none;
+        }
     }
 
     &__section {
@@ -233,10 +270,12 @@ $severity-low: #3fb950;
         gap: 0.4rem;
 
         p {
+            min-width: 0;
             margin: 0;
             font-size: 0.835rem;
             color: color.adjust($text-muted, $lightness: 15%);
             line-height: 1.6;
+            overflow-wrap: anywhere;
         }
     }
 
@@ -266,6 +305,7 @@ $severity-low: #3fb950;
 // ── Road Map ──────────────────────────────────────────────────────────────────
 .roadmap-list {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 0;
     position: relative;
@@ -285,6 +325,7 @@ $severity-low: #3fb950;
 
 .roadmap-day {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.75rem 0 0.75rem 3.5rem;
@@ -305,6 +346,7 @@ $severity-low: #3fb950;
 
     &__header {
         display: flex;
+        min-width: 0;
         align-items: center;
         gap: 0.6rem;
     }
@@ -320,13 +362,16 @@ $severity-low: #3fb950;
     }
 
     &__focus {
+        min-width: 0;
         margin: 0;
         font-size: 0.95rem;
         font-weight: 600;
         color: $text-primary;
+        overflow-wrap: anywhere;
     }
 
     &__tasks {
+        min-width: 0;
         list-style: none;
         margin: 0;
         padding: 0;
@@ -336,11 +381,13 @@ $severity-low: #3fb950;
 
         li {
             display: flex;
+            min-width: 0;
             align-items: flex-start;
             gap: 0.5rem;
             font-size: 0.845rem;
             color: color.adjust($text-muted, $lightness: 12%);
             line-height: 1.5;
+            overflow-wrap: anywhere;
         }
     }
 
@@ -358,6 +405,7 @@ $severity-low: #3fb950;
 .interview-sidebar {
     width: 240px;
     flex-shrink: 0;
+    min-width: 0;
     padding: 1.75rem 1.25rem;
     display: flex;
     flex-direction: column;
@@ -447,18 +495,21 @@ $severity-low: #3fb950;
 
     &__list {
         display: flex;
+        min-width: 0;
         flex-wrap: wrap;
         gap: 0.5rem;
     }
 }
 
 .skill-tag {
+    max-width: 100%;
     font-size: 0.775rem;
     font-weight: 500;
     padding: 0.3rem 0.7rem;
     border-radius: 0.4rem;
     border: 1px solid;
     cursor: default;
+    overflow-wrap: anywhere;
 
     &--high {
         color: $severity-high;
@@ -476,5 +527,334 @@ $severity-low: #3fb950;
         color: $severity-low;
         background-color: rgba($severity-low, 0.1);
         border-color: rgba($severity-low, 0.25);
+    }
+}
+
+@media (max-width: 1024px) {
+    .interview-page {
+        padding: clamp(0.75rem, 2.5vw, 1.5rem);
+    }
+
+    .interview-layout {
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    .interview-divider,
+    .sidebar-divider {
+        display: none;
+    }
+
+    .interview-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 1rem 1.25rem 0.75rem;
+
+        .nav-content {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        &__label {
+            grid-column: 1 / -1;
+        }
+
+        &__item {
+            justify-content: center;
+            min-width: 0;
+            min-height: 44px;
+            padding-inline: 0.5rem;
+            text-align: center;
+        }
+    }
+
+    .resume-button {
+        width: auto;
+        min-width: 13rem;
+        align-self: flex-end;
+    }
+
+    .interview-content {
+        flex: none;
+        max-height: none;
+        overflow: visible;
+        padding: 1.25rem 1.5rem 1.5rem;
+    }
+
+    .interview-sidebar {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+        align-items: center;
+        gap: 1rem 1.5rem;
+        width: 100%;
+        padding: 1rem 1.5rem 1.5rem;
+        border-top: 1px solid $border-color;
+    }
+
+    .match-score {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        justify-items: start;
+        gap: 0.35rem 0.75rem;
+
+        &__label {
+            grid-column: 1 / -1;
+            align-self: center;
+        }
+
+        &__ring {
+            grid-row: span 2;
+        }
+
+        &__sub {
+            text-align: left;
+            overflow-wrap: anywhere;
+        }
+    }
+}
+
+@media (max-width: 767px) {
+    .interview-page {
+        padding: 0.75rem;
+    }
+
+    .interview-layout {
+        border-radius: 0.75rem;
+    }
+
+    .interview-nav {
+        padding: 0.75rem 0.75rem 0.5rem;
+
+        .nav-content {
+            display: flex;
+            gap: 0.35rem;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scrollbar-width: none;
+
+            &::-webkit-scrollbar {
+                display: none;
+            }
+        }
+
+        &__label {
+            display: none;
+        }
+
+        &__item {
+            flex: 0 0 auto;
+            justify-content: flex-start;
+            gap: 0.45rem;
+            padding: 0.65rem 0.75rem;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+    }
+
+    .resume-button {
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        align-self: stretch;
+    }
+
+    .interview-content {
+        max-height: none;
+        overflow: visible;
+        padding: 1rem 0.875rem 1.25rem;
+    }
+
+    .content-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+
+        h2 {
+            font-size: 1rem;
+        }
+
+        &__count {
+            font-size: 0.72rem;
+        }
+    }
+
+    .q-card__header {
+        min-height: 48px;
+        gap: 0.55rem;
+        padding: 0.8rem 0.75rem;
+    }
+
+    .q-card__question {
+        font-size: 0.85rem;
+    }
+
+    .q-card__body {
+        padding: 0 0.75rem 0.85rem;
+        padding-top: 0.75rem;
+    }
+
+    .interview-sidebar {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+        padding: 1rem 0.875rem 1.25rem;
+    }
+
+    .match-score {
+        grid-template-columns: auto minmax(0, 1fr);
+        max-width: 22rem;
+        width: 100%;
+        margin: 0 auto;
+
+        &__ring {
+            width: 76px;
+            height: 76px;
+        }
+    }
+
+    .skill-gaps {
+        min-width: 0;
+    }
+
+    .roadmap-list::before {
+        left: 18px;
+    }
+
+    .roadmap-day {
+        padding-left: 2.75rem;
+
+        &::before {
+            left: 11px;
+        }
+
+        &__header {
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 0.4rem 0.6rem;
+        }
+
+        &__focus {
+            flex: 1 1 10rem;
+            font-size: 0.9rem;
+        }
+    }
+
+    .skill-gaps__list {
+        gap: 0.4rem;
+    }
+
+    .skill-tag {
+        font-size: 0.72rem;
+        padding: 0.3rem 0.55rem;
+    }
+}
+
+@media (max-width: 399px) {
+    .interview-page {
+        padding: 0.5rem;
+    }
+
+    .interview-nav {
+        padding-inline: 0.5rem;
+
+        &__item {
+            gap: 0.35rem;
+            padding-inline: 0.6rem;
+            font-size: 0.76rem;
+        }
+    }
+
+    .interview-content {
+        padding-inline: 0.65rem;
+    }
+
+    .content-header {
+        gap: 0.4rem;
+
+        h2 {
+            font-size: 0.95rem;
+        }
+    }
+
+    .q-card__header {
+        gap: 0.45rem;
+        padding-inline: 0.6rem;
+    }
+
+    .q-card__question {
+        font-size: 0.8rem;
+    }
+
+    .q-card__body {
+        padding-inline: 0.6rem;
+    }
+
+    .roadmap-list::before {
+        left: 15px;
+    }
+
+    .roadmap-day {
+        padding-left: 2.4rem;
+
+        &::before {
+            left: 8px;
+        }
+
+        &__tasks li {
+            gap: 0.4rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    .interview-sidebar {
+        padding-inline: 0.65rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .interview-nav {
+        min-width: 0;
+        gap: 0.6rem;
+        padding: 0.75rem 0.75rem 0.5rem;
+
+        .nav-content {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0.4rem;
+            width: 100%;
+            overflow: visible;
+        }
+
+        &__label {
+            display: block;
+            margin: 0 0 0.1rem;
+            padding: 0 0.25rem;
+        }
+
+        &__item {
+            display: flex;
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            flex: initial;
+            justify-content: center;
+            gap: 0.55rem;
+            padding: 0.65rem 0.75rem;
+            text-align: center;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+    }
+
+    .resume-button {
+        width: 100%;
+        min-width: 0;
+        align-self: stretch;
     }
 }

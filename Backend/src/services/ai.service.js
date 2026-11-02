@@ -4,8 +4,11 @@ const { zodToJsonSchema } = require("zod-to-json-schema");
 const puppeteer = require("puppeteer");
 
 const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY,
+  apiKey: process.env.GOOGLE_API_KEY,
 });
+
+const AI_MODEL = process.env.GOOGLE_MODEL || "gemini-3.5-flash-lite";
+console.log(AI_MODEL);
 
 const interviewReportSchema = z.object({
   matchScore: z
@@ -98,6 +101,8 @@ async function generateInterviewReport({
   selfDescription,
   jobDescription,
 }) {
+  console.log("start");
+
   const prompt = `Generate an interview report for a candidate with the following details:
                         Resume: ${resume}
                         Self Description: ${selfDescription}
@@ -159,7 +164,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                     `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: AI_MODEL,
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -168,6 +173,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
   });
 
   const jsonContent = JSON.parse(response.text);
+  console.log(response.text);
 
   const pdfBuffer = await generatePdfFromHtml(jsonContent.html);
 
