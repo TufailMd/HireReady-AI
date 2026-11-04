@@ -2,7 +2,7 @@
 
 **AI-powered interview preparation tailored to your resume and target job.**
 
-HireReady AI is a web application that helps job seekers prepare for interviews using artificial intelligence. Users provide a job description, upload their resume, and optionally describe their experience and skills. The application uses Google GenAI to generate a personalized interview preparation report with a candidate–job match score, technical and behavioral interview questions, suggested answers, identified skill gaps, and a preparation plan.
+HireReady AI is a web application that helps job seekers prepare for interviews using artificial intelligence. Users provide a job description, upload their resume, and optionally describe their experience and skills. The application uses GROQ to generate a personalized interview preparation report with a candidate–job match score, technical and behavioral interview questions, suggested answers, identified skill gaps, and a preparation plan.
 
 Users can revisit saved interview reports and generate a tailored resume PDF based on a report.
 
@@ -26,7 +26,7 @@ Users can revisit saved interview reports and generate a tailored resume PDF bas
 | Backend           | Node.js, Express.js                            |
 | Database          | MongoDB, Mongoose                              |
 | Authentication    | JSON Web Tokens (JWT), bcryptjs, cookie-parser |
-| AI Integration    | Google GenAI SDK                               |
+| AI Integration    | GROQ SDK                                       |
 | Resume Processing | pdf-parse                                      |
 | PDF Generation    | Puppeteer                                      |
 | Development Tools | npm, Vite, Nodemon                             |
@@ -46,7 +46,7 @@ HireReady-AI/
 │       ├── middlewares/    # Authentication and file uploads
 │       ├── models/         # User, report, and token blacklist models
 │       ├── routes/         # API route definitions
-│       └── services/       # Google GenAI and PDF generation
+│       └── services/       # GROQ and PDF generation
 │
 ├── Frontend/
 │   ├── package.json
@@ -67,7 +67,7 @@ Before running the application, make sure you have:
 
 - [Node.js](https://nodejs.org/) and npm installed.
 - A running [MongoDB](https://www.mongodb.com/) instance or MongoDB Atlas database.
-- A [Google GenAI API key](https://ai.google.dev/).
+- A [GROQ API key](https://console.groq.com/).
 - Git, if you want to clone the repository.
 
 The project has been run with Node.js `v22.17.0` and npm `10.9.2`. Other versions may work, but compatibility has not been established for every version.
@@ -109,8 +109,8 @@ Open `Backend/.env` and configure the required values:
 ```dotenv
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_long_random_secret
-GOOGLE_API_KEY=your_google_api_key
-GOOGLE_MODEL=<your-google-model>
+GROQ_API_KEY=your_GROQ_API_KEY
+GROQ_MODEL=<your-groq-model>
 ALLOWED_ORIGIN=<your-allowed-origin-for-cors>
 ```
 
@@ -169,7 +169,7 @@ Vite prints the local development URL. With the default configuration, open:
 
 **http://localhost:5173/**
 
-Both the frontend and backend must be running for the complete application to work. MongoDB must also be reachable, and the Google GenAI API key must be configured for AI-powered features.
+Both the frontend and backend must be running for the complete application to work. MongoDB must also be reachable, and the GROQ API key must be configured for AI-powered features.
 
 ## ⚙️ Configuration
 
@@ -179,8 +179,8 @@ The backend loads environment variables from `Backend/.env` using `dotenv`.
 | ---------------- | --------------- | ----------------------------------- |
 | `MONGO_URI`      | Yes             | MongoDB connection string           |
 | `JWT_SECRET`     | Yes             | Secret used to sign and verify JWTs |
-| `GOOGLE_API_KEY` | For AI features | API key for Google GenAI            |
-| `GOOGLE_MODEL`   | For AI features | Model name for Google GenAI         |
+| `GROQ_API_KEY`   | For AI features | API key for Groq                    |
+| `GROQ_MODEL`     | For AI features | Model name for Groq                 |
 | `ALLOWED_ORIGIN` | Yes             | Allowed origin for CORS             |
 
 The following settings are currently hard-coded in the application:
@@ -292,7 +292,7 @@ The backend dependency audit reported zero known vulnerabilities after upgrading
 - **Password storage:** User passwords are hashed using bcryptjs before being stored.
 - **Authentication:** JWTs have a one-day lifetime. The application also maintains a token blacklist for invalidated tokens.
 - **User data:** Interview reports and candidate information are stored in MongoDB.
-- **AI processing:** Resume text, job descriptions, and candidate-provided information are sent to the configured Google GenAI service to generate tailored content. Only submit information you are authorized to share.
+- **AI processing:** Resume text, job descriptions, and candidate-provided information are sent to the configured GROQ service to generate tailored content. Only submit information you are authorized to share.
 - **File uploads:** The backend currently enforces a 3 MB upload limit. Use the supported PDF format.
 - **Deployment security:** The default local setup uses HTTP and localhost URLs. Before public deployment, configure HTTPS, secure cookie settings, appropriate CORS origins, and production secrets.
 
